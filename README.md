@@ -11,18 +11,20 @@ This repository details the full-custom IC design, optimization, and system-leve
 Unlike standard academic projects, this design strictly addresses **industrial-grade challenges**:
 1. **PVT-Invariant Biasing:** Designed a custom OpAmp-assisted replica bias network for the LNA, limiting DC current drift to **< 1.5%** across extreme PVT corners (-40°C to 125°C).
 2. **Multi-Pole Frequency Compensation:** Architected and stabilized a high-gain **3-stage baseband OpAmp (GBW = 900 MHz, Phase Margin = 63°)** using Zero-Nulling Miller Compensation to drive heavy TIA loads.
-3. **LO/Mixer Reliability:** Optimized a 25% duty-cycle passive mixer targeting strict Time-Dependent Dielectric Breakdown (TDDB) limits while maximizing IIP3.
+3. **LO/Mixer Reliability:** Optimized a 50% duty-cycle passive mixer targeting strict Time-Dependent Dielectric Breakdown (TDDB) limits while maximizing IIP3.
 
 ---
 
 ## 🏗️ System Architecture
 
 The Zero-IF architecture was chosen for its high integration capability, completely eliminating the need for off-chip IF SAW filters. The front-end consists of three primary blocks:
+
 1. **Cascode Low Noise Amplifier (LNA):** Employs inductive source degeneration for simultaneous noise and power matching.
-2. **Current-Mode Passive Mixer:** Uses a 25% duty-cycle local oscillator (LO) to eliminate 1/f noise and prevent I/Q channel crosstalk.
+2. **Current-Mode Passive Mixer:** Uses a 50% duty-cycle local oscillator (LO) to eliminate DC power consumption and 1/f noise. Terminating the mixer into a low-impedance TIA preserves high system linearity while significantly easing the design complexity and power requirements of the LO generation network.
 3. **Baseband Transimpedance Amplifier (TIA):** Converts the down-mixed RF current into a baseband voltage while providing 1st-order low-pass filtering.
 
 ![System Architecture](images/system_arch.png)
+
 *(Fig 1. High-level architecture of the Direct-Conversion Receiver)*
 
 ---
@@ -40,13 +42,14 @@ The LNA features a cascode topology to minimize the Miller effect and improve re
 
 *(Fig 2. LNA schematic featuring the OpAmp-assisted PVT-invariant bias network)*
 
-### 2. 25% Duty-Cycle Passive Down-Converter (Mixer)
-Active Gilbert-cell mixers introduce severe flicker (1/f) noise, which is fatal for baseband signals at DC (0 Hz). Thus, a purely passive switching quad was implemented.
+### 2. 50% Duty-Cycle Passive Down-Converter (Mixer)
+Active Gilbert-cell mixers introduce severe flicker (1/f) noise, which is fatal for baseband signals at DC (0 Hz). Thus, a purely passive switching quad driven by a 50% duty-cycle LO was implemented to eliminate DC current consumption.
 
-* **25% LO Duty Cycle:** A 25% non-overlapping LO prevents the simultaneous conduction of I and Q switches. This eliminates signal shunting to ground, boosting the conversion gain by **3 dB** and significantly lowering the noise figure.
-* **TDDB-Aware Biasing:** To minimize switch $R_{on}$ ($2.5\ \Omega$) for high linearity without breaking the 65nm process TDDB limit ($1.2\text{ V}$), the gate bias was meticulously calculated. The LO swing was maximized to $1.2\text{ V}$ ($0.6\text{ V}$ to $1.8\text{ V}$ absolute), with a precise AC-coupled DC bias of $0.75\text{ V}$, ensuring hard turn-on and deep turn-off.
+* **Current-Mode Operation:** To maintain the inherent high linearity of the passive switches, the mixer is terminated into the low input impedance of the subsequent TIA. This prevents large voltage swings at the mixer output, minimizing $V_{gs}$ modulation and achieving an outstanding system IIP3.
+* **TDDB-Aware Biasing:** To minimize switch $R_{on}$ ($2.5\ \Omega$) without breaking the 65nm process TDDB limit ($1.2\text{ V}$), the gate bias was meticulously calculated. The LO swing was maximized to $1.2\text{ V}$ ($0.6\text{ V}$ to $1.8\text{ V}$ absolute), with an AC-coupled DC bias of $1.2\text{ V}$ to ensure proper switching.
 
 ![Mixer and LO Waveforms](images/mixer_lo.png)
+
 *(Fig 3. Passive mixer schematic)*
 
 ### 3. Baseband TIA & 3-Stage Active-RC Filter
@@ -54,7 +57,7 @@ The TIA uses an $R_f = 750\ \Omega$ and $C_f = 5.1\text{ pF}$ to set the dominan
 
 ![BBF Schematic](images/BBF_Schematic.png)
 
-*(Fig 4. Bode plot of the 3-stage OpAmp demonstrating 63.1° Phase Margin)*
+*(Fig 4. 3-Stage OpAmp Schematic)*
 
 * **3-Stage OpAmp Architecture:** 
   * *Stage 1:* PMOS input differential pair with cascode (Gain = 35 dB).
@@ -65,7 +68,7 @@ The TIA uses an $R_f = 750\ \Omega$ and $C_f = 5.1\text{ pF}$ to set the dominan
 
 ![OpAmp Bode Plot](images/opamp_bode.png)
 
-*(Fig 4. Bode plot of the 3-stage OpAmp demonstrating 63.1° Phase Margin)*
+*(Fig 5. Bode plot of the 3-stage OpAmp demonstrating 63.1° Phase Margin)*
 
 ---
 
@@ -80,13 +83,13 @@ The full chain (LNA $\rightarrow$ Passive Mixer $\rightarrow$ Baseband TIA) was 
 | :--- | :--- | :--- |
 | **RF Operating Band** | 2.1 – 2.7 GHz | B1/B7/B38/B41 |
 | **Baseband Pole** | 38.7 MHz | Active-RC TIA Filter |
-| **Total Conversion Gain** | 33.8 dB | Exceeded 30 dB specification |
-| **System Noise Figure (NF)** | 6.4 dB | Integrated 1/f and thermal noise |
-| **System IIP3** | -18.8 dBm | Current-mode termination maintains high linearity |
+| **Total Conversion Gain** | 31.68 dB | Exceeded 30 dB specification |
+| **System IIP3** | -50 dBm (3.16uA) | Current-mode termination maintains high linearity |
 | **LNA DC Current Variation** | < 5.5% | Across -40°C to 125°C (PVT) |
 
 ![System Performance](images/system_nf_gain.png)
-*(Fig 5. Full-chain Conversion Gain and Noise Figure over the operating band)*
+
+*(Fig 6. Full-chain Conversion Gain and Noise Figure over the operating band)*
 
 ---
 
